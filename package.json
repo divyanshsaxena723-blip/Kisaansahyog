@@ -1,0 +1,37 @@
+{
+  "name": "kisaansahyog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KisaanSahyog — a mobile-first PWA for crop advisory, soil health, mandi prices, and farmer skills.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "npm run build -w @kisaansahyog/shared && concurrently -n web,api -c green,yellow \"npm run dev -w @kisaansahyog/web\" \"npm run dev -w @kisaansahyog/api\"",
+    "dev:web": "npm run dev -w @kisaansahyog/web",
+    "dev:api": "npm run build -w @kisaansahyog/shared && npm run dev -w @kisaansahyog/api",
+    "build": "npm run build -w @kisaansahyog/shared && npm run build -w @kisaansahyog/skills && npm run build -w @kisaansahyog/api && npm run build -w @kisaansahyog/web",
+    "lint": "eslint .",
+    "test": "npm run test -w @kisaansahyog/skills",
+    "test:watch": "npm run test:watch -w @kisaansahyog/skills",
+    "typecheck": "npm run build -w @kisaansahyog/shared && npm run build -w @kisaansahyog/skills && npm run typecheck -w @kisaansahyog/api && npm run typecheck -w @kisaansahyog/web",
+    "preview": "npm run preview -w @kisaansahyog/web",
+    "start:api": "npm run start -w @kisaansahyog/api",
+    "clean": "node -e \"const { rmSync } = require('node:fs'); for (const dir of ['apps/web/dist', 'apps/api/dist', 'packages/shared/dist', 'packages/skills/dist']) rmSync(dir, { recursive: true, force: true });\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}
