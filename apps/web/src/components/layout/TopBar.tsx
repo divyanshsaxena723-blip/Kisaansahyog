@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Languages, Sprout, UserRound, Wifi, WifiOff } from "lucide-react";
+import { Globe, LogOut, Sprout, UserRound, Wifi, WifiOff } from "lucide-react";
 import { getDictionary } from "@kisaansahyog/shared";
 import { useAppStore } from "../../store/useAppStore";
 
@@ -16,13 +16,22 @@ function getGreetingKey(): "morning" | "afternoon" | "evening" {
   return "evening";
 }
 
+const languageLabels: Record<string, string> = {
+  hi: "हिं",
+  en: "EN",
+  pa: "ਪੰ",
+  mr: "मर",
+};
+
 export function TopBar() {
   const language = useAppStore((state) => state.language);
   const role = useAppStore((state) => state.role);
   const is2GMode = useAppStore((state) => state.is2GMode);
-  const toggleLanguage = useAppStore((state) => state.toggleLanguage);
-  const toggleRole = useAppStore((state) => state.toggleRole);
+  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  const userProfile = useAppStore((state) => state.userProfile);
+  const setLanguageModalOpen = useAppStore((state) => state.setLanguageModalOpen);
   const toggle2GMode = useAppStore((state) => state.toggle2GMode);
+  const logout = useAppStore((state) => state.logout);
 
   const dictionary = getDictionary(language);
   const greeting = dictionary.greetings[getGreetingKey()];
@@ -68,35 +77,43 @@ export function TopBar() {
 
           <button
             type="button"
-            onClick={toggleLanguage}
+            onClick={() => setLanguageModalOpen(true)}
             aria-label={dictionary.common.changeLanguage}
             className="inline-flex min-h-9 items-center gap-1 rounded-full border border-cream-border bg-cream-card px-2.5 text-[11px] font-semibold text-soil-brown transition hover:bg-cream-tan/60"
           >
-            <Languages size={14} aria-hidden="true" />
-            {language === "hi" ? "EN" : "हिं"}
+            <Globe size={14} aria-hidden="true" />
+            {languageLabels[language] ?? language.toUpperCase()}
           </button>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-soil-text">{greeting}</p>
-          <p className="truncate text-[11px] text-soil-brown">
-            {is2GMode ? dictionary.common.dataSaver : dictionary.common.online}
-          </p>
-        </div>
+      {isAuthenticated && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-soil-text">{greeting}</p>
+            <p className="truncate text-[11px] text-soil-brown">
+              {userProfile?.name} • {dictionary.roles[role]}
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={toggleRole}
-          aria-label={`${dictionary.common.switchRole}: ${dictionary.roles[role]}`}
-          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-leaf-green/25 bg-leaf-soft px-3 text-xs font-semibold text-leaf-deep transition hover:bg-leaf-soft/70"
-        >
-          <UserRound size={14} aria-hidden="true" />
-          {dictionary.roles[role]}
-          <ArrowLeftRight size={12} aria-hidden="true" />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label={dictionary.auth.logout}
+            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-clay-red/25 bg-clay-red/10 px-3 text-xs font-semibold text-clay-red transition hover:bg-clay-red/15"
+          >
+            <LogOut size={14} aria-hidden="true" />
+            {dictionary.auth.logout}
+          </button>
+        </div>
+      )}
+
+      {!isAuthenticated && (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-cream-tan/50 px-3 py-2">
+          <UserRound size={14} className="text-soil-brown" />
+          <p className="text-xs text-soil-brown">{dictionary.auth.subtitle}</p>
+        </div>
+      )}
     </header>
   );
 }

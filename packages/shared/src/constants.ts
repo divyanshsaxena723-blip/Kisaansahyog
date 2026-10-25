@@ -4,13 +4,13 @@ export const APP_TAGLINE = "Smarter farming, stronger harvests.";
 export const APP_TAGLINE_HI = "बेहतर खेती, मजबूत फसल।";
 
 /** Languages supported by the app. Hindi is the default for the pilot. */
-export const LANGUAGES = ["hi", "en"] as const;
+export const LANGUAGES = ["hi", "en", "pa", "mr"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export const ROLES = ["farmer", "buyer"] as const;
 export type Role = (typeof ROLES)[number];
 
-export const FARMER_TABS = ["advisory", "soil", "sell", "market", "directory"] as const;
+export const FARMER_TABS = ["advisory", "soil", "sell", "market"] as const;
 export type FarmerTab = (typeof FARMER_TABS)[number];
 
 export const BUYER_TABS = ["market", "requirements", "saved", "account"] as const;

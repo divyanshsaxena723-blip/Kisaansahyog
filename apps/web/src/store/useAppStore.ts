@@ -10,6 +10,14 @@ import {
   type Role,
 } from "@kisaansahyog/shared";
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  phone: string;
+  location: string;
+  role: Role;
+}
+
 interface AppState {
   language: Language;
   role: Role;
@@ -17,6 +25,9 @@ interface AppState {
   farmerTab: FarmerTab;
   buyerTab: BuyerTab;
   isVoiceOpen: boolean;
+  isLanguageModalOpen: boolean;
+  isAuthenticated: boolean;
+  userProfile: UserProfile | null;
   setLanguage: (language: Language) => void;
   toggleLanguage: () => void;
   setRole: (role: Role) => void;
@@ -27,6 +38,9 @@ interface AppState {
   setBuyerTab: (tab: BuyerTab) => void;
   setVoiceOpen: (open: boolean) => void;
   toggleVoice: () => void;
+  setLanguageModalOpen: (open: boolean) => void;
+  loginAs: (profile: UserProfile) => void;
+  logout: () => void;
 }
 
 export const useAppStore = create<AppState>()((set) => ({
@@ -36,10 +50,17 @@ export const useAppStore = create<AppState>()((set) => ({
   farmerTab: DEFAULT_FARMER_TAB,
   buyerTab: DEFAULT_BUYER_TAB,
   isVoiceOpen: false,
+  isLanguageModalOpen: false,
+  isAuthenticated: false,
+  userProfile: null,
 
   setLanguage: (language) => set({ language }),
   toggleLanguage: () =>
-    set((state) => ({ language: state.language === "hi" ? "en" : "hi" })),
+    set((state) => {
+      const order: Language[] = ["hi", "en", "pa", "mr"];
+      const idx = order.indexOf(state.language);
+      return { language: order[(idx + 1) % order.length] };
+    }),
 
   setRole: (role) => set({ role }),
   toggleRole: () =>
@@ -53,4 +74,7 @@ export const useAppStore = create<AppState>()((set) => ({
 
   setVoiceOpen: (isVoiceOpen) => set({ isVoiceOpen }),
   toggleVoice: () => set((state) => ({ isVoiceOpen: !state.isVoiceOpen })),
+  setLanguageModalOpen: (isLanguageModalOpen) => set({ isLanguageModalOpen }),
+  loginAs: (profile) => set({ isAuthenticated: true, userProfile: profile, role: profile.role }),
+  logout: () => set({ isAuthenticated: false, userProfile: null }),
 }));

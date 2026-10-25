@@ -1,11 +1,12 @@
 import { Mic } from "lucide-react";
 import { getDictionary, type BuyerTab, type FarmerTab } from "@kisaansahyog/shared";
 import { BottomNav } from "./components/layout/BottomNav";
+import { LanguageModal } from "./components/layout/LanguageModal";
 import { TopBar } from "./components/layout/TopBar";
 import { VoiceSheet } from "./components/layout/VoiceSheet";
 import AdvisoryScreen from "./screens/AdvisoryScreen";
 import BuyerScreens from "./screens/BuyerScreens";
-import LabourScreen from "./screens/LabourScreen";
+import LoginScreen from "./screens/LoginScreen";
 import MarketScreen from "./screens/MarketScreen";
 import SellScreen from "./screens/SellScreen";
 import SoilScreen from "./screens/SoilScreen";
@@ -16,6 +17,7 @@ export default function App() {
   const role = useAppStore((state) => state.role);
   const farmerTab = useAppStore((state) => state.farmerTab);
   const buyerTab = useAppStore((state) => state.buyerTab);
+  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const setVoiceOpen = useAppStore((state) => state.setVoiceOpen);
 
   const dictionary = getDictionary(language);
@@ -30,8 +32,6 @@ export default function App() {
         return <SellScreen />;
       case "market":
         return <MarketScreen />;
-      case "directory":
-        return <LabourScreen />;
       default:
         return <AdvisoryScreen />;
     }
@@ -39,6 +39,16 @@ export default function App() {
 
   function renderBuyerScreen(_tab: BuyerTab) {
     return <BuyerScreens />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="mx-auto min-h-screen w-full max-w-md bg-cream-bg sm:border-x sm:border-cream-border">
+        <TopBar />
+        <LoginScreen />
+        <LanguageModal />
+      </div>
+    );
   }
 
   return (
@@ -51,21 +61,24 @@ export default function App() {
           : renderBuyerScreen(buyerTab)}
       </main>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30">
-        <div className="mx-auto flex w-full max-w-md justify-end px-4">
-          <button
-            type="button"
-            onClick={() => setVoiceOpen(true)}
-            aria-label={dictionary.common.voiceAssistant}
-            className="pointer-events-auto flex h-14 w-14 min-h-[56px] min-w-[56px] items-center justify-center rounded-full bg-harvest-gold text-soil-deep shadow-lg transition active:scale-95"
-          >
-            <Mic size={24} aria-hidden="true" />
-          </button>
+      {role === "farmer" && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30">
+          <div className="mx-auto flex w-full max-w-md justify-end px-4">
+            <button
+              type="button"
+              onClick={() => setVoiceOpen(true)}
+              aria-label={dictionary.common.voiceAssistant}
+              className="pointer-events-auto flex h-14 w-14 min-h-[56px] min-w-[56px] items-center justify-center rounded-full bg-harvest-gold text-soil-deep shadow-lg transition active:scale-95"
+            >
+              <Mic size={24} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <VoiceSheet />
       <BottomNav />
+      <LanguageModal />
     </div>
   );
 }

@@ -7,7 +7,6 @@ import {
   Store,
   TrendingUp,
   UserRound,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -27,7 +26,6 @@ const farmerIcons: Record<FarmerTab, LucideIcon> = {
   soil: FlaskConical,
   sell: IndianRupee,
   market: TrendingUp,
-  directory: Users,
 };
 
 const buyerIcons: Record<BuyerTab, LucideIcon> = {
