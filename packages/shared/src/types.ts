@@ -13,6 +13,9 @@ export interface CropListing {
   verified: boolean;
   organic: boolean;
   createdAt: string;
+  quantity?: number;
+  rate?: number;
+  location?: string;
 }
 
 export interface BargainOffer {
@@ -26,6 +29,28 @@ export interface BargainOffer {
   originalRate: number;
   offeredRate: number;
   quantityQuintals: number;
-  status: "pending" | "accepted" | "rejected" | "countered";
+  status: 'pending' | 'accepted' | 'rejected' | 'countered';
   createdAt: string;
 }
+
+export interface FarmerProfile {
+  name: string;
+  nameHi?: string;
+  location: string;
+  pin: string;
+  phone: string;
+  land: string;
+  activeCrop: string;
+  sown: string;
+  soil?: string;
+  soilDetails?: {
+    type: string;
+    pH: number;
+    moisture: number;
+    n: string;
+    p: string;
+    k: string;
+  };
+}
+
+export type UserRole = 'farmer' | 'buyer' | null;

@@ -1,10 +1,9 @@
 {
   "name": "@kisaansahyog/api",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Express API for KisaanSahyog advisories, market data, and AI services.",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
@@ -13,12 +12,17 @@
   },
   "dependencies": {
     "@kisaansahyog/shared": "*",
-    "express": "^5.3.0"
+    "@supabase/supabase-js": "^2.43.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^24.19.2",
-    "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.12",
+    "tsx": "^4.10.5",
+    "typescript": "^5.4.5"
   }
 }

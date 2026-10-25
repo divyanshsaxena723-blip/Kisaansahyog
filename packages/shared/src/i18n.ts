@@ -8,7 +8,7 @@ import {
   type NavKey,
   type Role,
   type WeatherStatus,
-} from "./constants";
+} from "./constants.js";
 
 export interface Dictionary {
   app: {

@@ -10,8 +10,9 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { useListingStore } from '../store/useListingStore';
 
-interface Listing {
+interface BargainLot {
   id: string;
   cropName: string;
   cropNameHi: string;
@@ -25,104 +26,66 @@ interface Listing {
   harvestDate: string;
 }
 
-const INITIAL_LISTINGS: Listing[] = [
-  {
-    id: 'lot-1',
-    cropName: 'Wheat',
-    cropNameHi: 'गेहूं',
-    variety: 'HD-2967 (Sharbati)',
-    quantity: 40,
-    rate: 2450,
-    farmerName: 'रमेश कुमार (Ramesh Kumar)',
-    farmerPhone: '9876543210',
-    location: 'सीतापुर, उत्तर प्रदेश (Sitapur, UP)',
-    verified: true,
-    harvestDate: 'Ready Now (तैयार स्टॉक)',
-  },
-  {
-    id: 'lot-2',
-    cropName: 'Mustard',
-    cropNameHi: 'सरसों',
-    variety: 'Pusa Bold',
-    quantity: 25,
-    rate: 5400,
-    farmerName: 'सुरेश पटेल (Suresh Patel)',
-    farmerPhone: '9876543211',
-    location: 'करनाल, हरियाणा (Karnal, HR)',
-    verified: true,
-    harvestDate: 'Ready Now (तैयार स्टॉक)',
-  },
-  {
-    id: 'lot-3',
-    cropName: 'Chana',
-    cropNameHi: 'चना',
-    variety: 'Desi Chana (चना)',
-    quantity: 15,
-    rate: 5850,
-    farmerName: 'महेंद्र सिंह (Mahendra Singh)',
-    farmerPhone: '9876543212',
-    location: 'नासिक, महाराष्ट्र (Nashik, MH)',
-    verified: true,
-    harvestDate: 'In 3 Days',
-  },
-  {
-    id: 'lot-4',
-    cropName: 'Basmati',
-    cropNameHi: 'बासमती धान',
-    variety: 'Pusa 1121',
-    quantity: 60,
-    rate: 3800,
-    farmerName: 'बलबीर सिंह (Balbir Singh)',
-    farmerPhone: '9876543213',
-    location: 'लुधियाना, पंजाब (Ludhiana, PB)',
-    verified: true,
-    harvestDate: 'Ready Now (तैयार स्टॉक)',
-  },
-  {
-    id: 'lot-5',
-    cropName: 'Maize',
-    cropNameHi: 'मक्का',
-    variety: 'Hybrid Yellow',
-    quantity: 35,
-    rate: 2150,
-    farmerName: 'राजेश यादव (Rajesh Yadav)',
-    farmerPhone: '9876543214',
-    location: 'अलवर, राजस्थान (Alwar, RJ)',
-    verified: true,
-    harvestDate: 'Ready Now',
-  },
-];
+const cropFilterOptions = ['All', 'Wheat', 'Basmati', 'Mustard', 'Chana', 'Maize', 'Soybean', 'Potato'];
 
 export const BuyerMarketScreen: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [selectedCrop, setSelectedCrop] = useState<string>('All');
-  const [activeBargainLot, setActiveBargainLot] = useState<Listing | null>(null);
+  const listings = useListingStore((state) => state.listings);
+  const searchQuery = useListingStore((state) => state.searchQuery);
+  const selectedCropFilter = useListingStore((state) => state.selectedCropFilter);
+  const setSearchQuery = useListingStore((state) => state.setSearchQuery);
+  const setSelectedCropFilter = useListingStore((state) => state.setSelectedCropFilter);
+
+  const [activeBargainLot, setActiveBargainLot] = useState<BargainLot | null>(null);
   const [counterRate, setCounterRate] = useState<number>(0);
   const [offerSuccessMsg, setOfferSuccessMsg] = useState<string | null>(null);
 
-  const crops = ['All', 'Wheat', 'Basmati', 'Mustard', 'Chana', 'Maize'];
+  const filteredListings = listings
+    .map((lot) => {
+      const quantity =
+        (lot as any).quantityQuintals ?? (lot as any).quantity ?? 0;
+      const rate = (lot as any).ratePerQuintal ?? (lot as any).rate ?? 0;
+      const location =
+        (lot as any).location ??
+        [(lot as any).district, (lot as any).state]
+          .filter(Boolean)
+          .join(', ') ??
+        '';
+      return {
+        id: lot.id,
+        cropName: lot.cropName,
+        cropNameHi: lot.cropNameHi ?? lot.cropName,
+        variety: lot.variety,
+        quantity,
+        rate,
+        farmerName: lot.farmerName,
+        farmerPhone: lot.farmerPhone,
+        location,
+        verified: lot.verified ?? true,
+        harvestDate: (lot as any).harvestDate ?? 'Ready Now (तैयार स्टॉक)',
+      } as BargainLot;
+    })
+    .filter((lot) => {
+      const filter = selectedCropFilter || 'All';
+      const matchesCrop =
+        filter === 'All' || lot.cropName.toLowerCase() === filter.toLowerCase();
+      const query = (searchQuery || '').toLowerCase();
+      if (!query) return matchesCrop;
+      const matchesSearch =
+        lot.cropName.toLowerCase().includes(query) ||
+        lot.cropNameHi.includes(query) ||
+        lot.variety.toLowerCase().includes(query) ||
+        lot.location.toLowerCase().includes(query) ||
+        lot.farmerName.toLowerCase().includes(query);
+      return matchesCrop && matchesSearch;
+    });
 
-  const filteredListings = INITIAL_LISTINGS.filter((lot) => {
-    const matchesCrop =
-      selectedCrop === 'All' ||
-      lot.cropName.toLowerCase() === selectedCrop.toLowerCase();
-    const query = search.toLowerCase();
-    const matchesSearch =
-      lot.cropName.toLowerCase().includes(query) ||
-      lot.cropNameHi.includes(query) ||
-      lot.variety.toLowerCase().includes(query) ||
-      lot.location.toLowerCase().includes(query) ||
-      lot.farmerName.toLowerCase().includes(query);
-    return matchesCrop && matchesSearch;
-  });
-
-  const openBargainModal = (lot: Listing) => {
+  const openBargainModal = (lot: BargainLot) => {
     setActiveBargainLot(lot);
     setCounterRate(lot.rate - 50);
     setOfferSuccessMsg(null);
   };
 
-  const handleWhatsAppBargain = (lot: Listing, offered: number) => {
+  const handleWhatsAppBargain = (lot: BargainLot, offered: number) => {
     const diff = lot.rate - offered;
     const text = encodeURIComponent(
       `नमस्ते ${lot.farmerName} जी! मैंने किसान सहयोग (KisaanSahyog) पर आपका ${lot.cropNameHi} (${lot.variety}) का ${lot.quantity} क्विंटल लॉट देखा।\n\nआपका भाव: ₹${lot.rate}/क्विंटल\nमेरा प्रस्तावित भाव: ₹${offered}/क्विंटल (-₹${diff})\nकुल सौदा मूल्य: ₹${(offered * lot.quantity).toLocaleString('en-IN')}\n\nक्या यह भाव आपको स्वीकार है?`,
@@ -136,27 +99,25 @@ export const BuyerMarketScreen: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Search Header */}
       <div className="bg-white p-3 rounded-2xl border border-cream-border shadow-sm">
         <div className="relative mb-3">
           <Search className="absolute left-3.5 top-3.5 text-soil-brown" size={18} />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="फसल, किस्म या जिला खोजें..."
             className="w-full min-h-[48px] pl-10 pr-4 bg-cream-bg rounded-xl border border-cream-border text-sm font-semibold text-soil-deep focus:outline-none focus:ring-2 focus:ring-leaf-green"
           />
         </div>
 
-        {/* Filter Chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {crops.map((crop) => (
+          {cropFilterOptions.map((crop) => (
             <button
               key={crop}
-              onClick={() => setSelectedCrop(crop)}
+              onClick={() => setSelectedCropFilter(crop)}
               className={`min-h-[40px] px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                selectedCrop === crop
+                (selectedCropFilter || 'All') === crop
                   ? 'bg-soil-brown text-white shadow-sm'
                   : 'bg-cream-bg text-soil-brown border border-cream-border hover:bg-cream-tan'
               }`}
@@ -167,7 +128,6 @@ export const BuyerMarketScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Banner */}
       <div className="flex items-center justify-between px-1">
         <div>
           <h2 className="text-base font-bold text-soil-deep font-devanagari">
@@ -182,7 +142,6 @@ export const BuyerMarketScreen: React.FC = () => {
         </span>
       </div>
 
-      {/* Listings List */}
       <div className="space-y-3">
         {filteredListings.map((lot) => {
           const totalVal = lot.rate * lot.quantity;
@@ -191,7 +150,6 @@ export const BuyerMarketScreen: React.FC = () => {
               key={lot.id}
               className="bg-white rounded-2xl p-4 border border-cream-border shadow-sm hover:shadow-md transition-shadow"
             >
-              {/* Card Top */}
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -226,7 +184,6 @@ export const BuyerMarketScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Farmer Info Strip */}
               <div className="bg-cream-bg rounded-xl p-2.5 my-3 flex justify-between items-center text-xs">
                 <div>
                   <span className="text-soil-brown block text-[10px]">
@@ -242,7 +199,6 @@ export const BuyerMarketScreen: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons: Call, WhatsApp, Bargain */}
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <a
                   href={`tel:${lot.farmerPhone}`}
@@ -273,11 +229,9 @@ export const BuyerMarketScreen: React.FC = () => {
         })}
       </div>
 
-      {/* Bargain Modal / Drawer */}
       {activeBargainLot && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center p-0 max-w-md mx-auto">
           <div className="w-full bg-white rounded-t-3xl border-t border-cream-border p-5 shadow-2xl">
-            {/* Modal Header */}
             <div className="flex justify-between items-center pb-3 border-b border-cream-border">
               <div>
                 <h3 className="text-lg font-bold text-soil-deep font-devanagari flex items-center gap-1.5">
@@ -316,7 +270,6 @@ export const BuyerMarketScreen: React.FC = () => {
               </div>
             ) : (
               <div className="py-4 space-y-4">
-                {/* Rates Comparison */}
                 <div className="grid grid-cols-2 gap-3 bg-cream-bg p-3 rounded-2xl border border-cream-border">
                   <div>
                     <span className="text-[11px] text-soil-brown font-semibold block">
@@ -336,7 +289,6 @@ export const BuyerMarketScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Counter Input & Quick Chips */}
                 <div>
                   <label
                     htmlFor="counter-rate-input"
@@ -366,7 +318,6 @@ export const BuyerMarketScreen: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Total Value Banner */}
                 <div className="bg-leaf-soft border border-leaf-green p-3 rounded-xl flex justify-between items-center text-xs">
                   <div>
                     <span className="text-soil-brown block">
@@ -380,19 +331,14 @@ export const BuyerMarketScreen: React.FC = () => {
                     <span className="text-soil-brown block">संशोधित मूल्य:</span>
                     <span className="text-base font-extrabold text-leaf-deep">
                       ₹{' '}
-                      {(counterRate * activeBargainLot.quantity).toLocaleString(
-                        'en-IN',
-                      )}
+                      {(counterRate * activeBargainLot.quantity).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
 
-                {/* Submit Actions */}
                 <div className="space-y-2 pt-2">
                   <button
-                    onClick={() =>
-                      handleWhatsAppBargain(activeBargainLot, counterRate)
-                    }
+                    onClick={() => handleWhatsAppBargain(activeBargainLot, counterRate)}
                     className="w-full min-h-[52px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm"
                   >
                     <MessageCircle size={18} />
@@ -487,9 +433,6 @@ export const BuyerAccountScreen: React.FC = () => (
   </div>
 );
 
-/**
- * Default entry used by App.tsx: renders the buyer screen for the active tab.
- */
 const BuyerScreens: React.FC = () => {
   const buyerTab = useAppStore((state) => state.buyerTab);
 

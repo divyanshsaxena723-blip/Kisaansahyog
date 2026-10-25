@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BUYER_TABS, FARMER_TABS, LANGUAGES, ROLES } from "./constants";
+import { BUYER_TABS, FARMER_TABS, LANGUAGES, ROLES } from "./constants.js";
 
 export const languageSchema = z.enum(LANGUAGES);
 export const roleSchema = z.enum(ROLES);
