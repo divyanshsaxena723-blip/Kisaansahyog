@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, AlertTriangle, Send, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Send } from 'lucide-react';
 import {
   getDictionary,
   MANDI_BENCHMARK_RATES,
@@ -7,6 +7,7 @@ import {
 } from '@kisaansahyog/shared';
 import { useAppStore } from '../store/useAppStore';
 import { useListingStore } from '../store/useListingStore';
+import { useSimulationStore } from '../store/useSimulationStore';
 import { SurfaceCard } from '../components/stitch/SurfaceCard';
 import { StatusBadge } from '../components/stitch/StatusBadge';
 
@@ -28,6 +29,9 @@ export default function SellScreen() {
   const setFarmerTab = useAppStore((state) => state.setFarmerTab);
   const dictionary = getDictionary(language);
 
+  // Simulation State
+  const isMandiCrashed = useSimulationStore((state) => state.isMandiCrashed);
+
   const addListing = useListingStore((state) => state.addListing);
 
   const [selectedCrop, setSelectedCrop] = useState(cropPresets[0]);
@@ -39,9 +43,15 @@ export default function SellScreen() {
   const benchmarkRate = useMemo(() => {
     const key = selectedCrop.cropName as keyof typeof MANDI_BENCHMARK_RATES;
     const hiKey = selectedCrop.cropNameHi as keyof typeof MANDI_BENCHMARK_RATES;
-    const rate = MANDI_BENCHMARK_RATES[key] ?? MANDI_BENCHMARK_RATES[hiKey] ?? 2400;
+    let rate = MANDI_BENCHMARK_RATES[key] ?? MANDI_BENCHMARK_RATES[hiKey] ?? 2400;
+
+    // Simulate -20% Mandi price crash for Wheat
+    if (isMandiCrashed && (selectedCrop.cropName === 'Wheat' || selectedCrop.cropNameHi === 'गेहूं')) {
+      rate = Math.round(rate * 0.8); // ₹1,920/Q
+    }
+
     return rate as number;
-  }, [selectedCrop]);
+  }, [selectedCrop, isMandiCrashed]);
 
   const guardrail = useMemo(() => {
     const mandiRate = benchmarkRate;
@@ -92,117 +102,141 @@ export default function SellScreen() {
       ratePerQuintal: Number(ratePerQuintal),
       farmerName: MOCK_FARMER.name,
       farmerPhone: MOCK_FARMER.phone,
-      district: MOCK_FARMER.location.split(',')[0].trim(),
+      district: 'सीतापुर',
       state: 'उत्तर प्रदेश',
       harvestDate,
       verified: true,
       organic: false,
-      location: MOCK_FARMER.location,
-    } as any);
+    });
 
-    setSuccess('आपकी फसल बाज़ार में लाइव हो गई है!');
+    setSuccess('आपकी फसल सफलतापूर्वक लिस्ट कर दी गई है! (Listed on Buyer Marketplace)');
     setTimeout(() => {
       setSuccess(null);
       setFarmerTab('market');
-    }, 1400);
+    }, 1800);
   };
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-extrabold text-soil-text">
-          {dictionary.screens.sell}
-        </h1>
-        <p className="text-xs text-soil-brown">
-          किसान से सीधे खरीदार तक • कमीशन मुक्त
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-extrabold text-soil-text">
+            {dictionary.screens.sell}
+          </h1>
+          <p className="text-xs text-soil-brown">
+            सीधे खरीदार तक पहुंचे • 0% कमीशन (Direct Mandi Portal)
+          </p>
+        </div>
+        <StatusBadge tone={isMandiCrashed ? "clay" : "leaf"}>
+          {isMandiCrashed ? "📉 भाव गिरावट (-20%)" : "0% बिचौलिया"}
+        </StatusBadge>
       </div>
 
       {success && (
-        <div className="flex items-center gap-2 rounded-2xl border border-leaf-green bg-leaf-soft px-3 py-2 text-sm font-semibold text-leaf-deep">
+        <div className="flex items-center gap-2 rounded-2xl bg-leaf-soft p-4 text-xs font-bold text-leaf-deep border border-leaf-deep/20 shadow-sm animate-fade-in">
           <CheckCircle2 size={18} />
           <span>{success}</span>
         </div>
       )}
 
-      <SurfaceCard>
-        <StatusBadge>
-          <Sparkles size={11} /> Farmer Listing
-        </StatusBadge>
-        <h2 className="mt-2 text-base font-bold">
-          नई फसल लिस्टिंग (New Crop Listing)
-        </h2>
-        <p className="text-xs text-soil-brown">
-          नीचे दिए गए विकल्पों से अपनी फसल भरें और बाज़ार में प्रकाशित करें
-        </p>
-      </SurfaceCard>
+      {/* SIMULATION TRIGGER: Mandi Price Crash Alert */}
+      {isMandiCrashed && (
+        <div className="rounded-2xl border-2 border-red-400 bg-red-50 p-4 text-xs text-red-950 shadow-md animate-fade-in space-y-2">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={20} className="mt-0.5 text-red-600 shrink-0" />
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="font-black text-sm text-red-900">
+                  📉 सीतापुर मंडी भाव में भारी गिरावट (-20% Mandi Price Crash)
+                </p>
+                <span className="rounded-full bg-red-200 px-2 py-0.5 text-[10px] font-bold text-red-900">
+                  गार्डरेल सक्रिय
+                </span>
+              </div>
+              <p className="mt-1 leading-relaxed text-red-800">
+                आवक बढ़ने के कारण गेहूं का मंडी मॉडल रेट ₹2,400 से गिरकर <strong>₹{benchmarkRate.toLocaleString('en-IN')}/Q</strong> हो गया है। किसान सहयोग मार्जिन गार्डरेल आपको औने-पौने दाम पर बेचने से रोकता है।
+              </p>
+              <div className="mt-2.5 rounded-xl bg-red-100 p-2.5 text-red-950 font-semibold border border-red-200">
+                💡 <span className="font-bold">विशेषज्ञ संस्तुति:</span> अपनी उपज को WDRA पंजीकृत गोदाम (Warehouse e-NWR) में रखें और 3% रियायती ब्याज पर ऋण लें, या सीधे संस्थागत फ्लोर मिल खरीदार से अनुबंधित मूल्य पर बेचें।
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SurfaceCard>
-        <h2 className="text-base font-bold">फसल का नाम और किस्म (Crop & Variety)</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {cropPresets.map((preset) => (
+        <h2 className="text-base font-bold text-soil-text">1. फसल का चयन करें (Select Crop)</h2>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {cropPresets.map((crop) => (
             <button
-              key={preset.label}
+              key={crop.label}
               type="button"
-              onClick={() => setSelectedCrop(preset)}
-              className={`min-h-[48px] rounded-full border px-4 text-sm font-semibold ${
-                selectedCrop.label === preset.label
-                  ? 'border-soil-brown bg-soil-brown text-white'
-                  : 'border-cream-border bg-cream-bg text-soil-deep'
+              onClick={() => setSelectedCrop(crop)}
+              className={`flex flex-col items-start rounded-2xl border p-3 text-left transition-all ${
+                selectedCrop.label === crop.label
+                  ? 'border-leaf-green bg-leaf-soft text-leaf-deep font-bold ring-2 ring-leaf-deep/20'
+                  : 'border-cream-border bg-cream-bg text-soil-text hover:border-leaf-green/40'
               }`}
             >
-              {preset.label}
+              <span className="text-sm">{crop.label}</span>
+              <span className="text-[11px] font-normal text-soil-brown">
+                {crop.cropNameHi}
+              </span>
             </button>
           ))}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-xl bg-cream-bg p-2.5">
-            <p className="text-soil-brown">Crop</p>
-            <p className="font-semibold text-soil-deep">
-              {selectedCrop.cropNameHi} ({selectedCrop.cropName})
+
+        <div className="mt-4 flex items-center justify-between rounded-2xl bg-cream-bg p-3 border border-cream-border">
+          <div>
+            <p className="text-xs text-soil-brown">सीतापुर मंडी बेंचमार्क भाव</p>
+            <p className="text-base font-bold text-leaf-deep">
+              ₹ {benchmarkRate.toLocaleString('en-IN')} / क्विंटल
             </p>
           </div>
-          <div className="rounded-xl bg-cream-bg p-2.5">
-            <p className="text-soil-brown">Variety</p>
-            <p className="font-semibold text-soil-deep">{selectedCrop.variety}</p>
-          </div>
+          <StatusBadge tone={isMandiCrashed ? "clay" : "gold"}>
+            {isMandiCrashed ? "Mandi Crashed" : "Live KVK Modal"}
+          </StatusBadge>
         </div>
       </SurfaceCard>
 
       <SurfaceCard>
-        <h2 className="text-base font-bold">
-          मात्रा और अपेक्षित दर (Quantity & Expected Rate)
+        <h2 className="text-base font-bold text-soil-text">
+          2. मात्रा और अपेक्षित दर (Quantity & Asking Rate)
         </h2>
 
-        <div className="mt-3 rounded-xl border border-cream-border bg-cream-bg px-3 py-2 text-xs font-semibold text-soil-deep">
-          📊 वर्तमान मंडी भाव: ₹{guardrail.mandiRate.toLocaleString('en-IN')}/Q •
-          स्वीकार्य सीमा: ₹{guardrail.minAllowed.toLocaleString('en-IN')} - ₹
-          {guardrail.maxAllowed.toLocaleString('en-IN')}/Q
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 space-y-3">
           <div>
             <label className="text-xs font-semibold text-soil-brown">
-              मात्रा (क्विंटल)
+              कुल मात्रा (क्विंटल में) / Quantity (Quintals)
             </label>
             <input
               type="number"
               min={1}
               value={quantityQuintals}
               onChange={(e) => setQuantityQuintals(Number(e.target.value))}
-              className="mt-1 min-h-[56px] w-full rounded-2xl border border-cream-border bg-cream-bg px-3 text-sm font-semibold text-soil-deep"
+              className="mt-1 min-h-[56px] w-full rounded-2xl border border-cream-border bg-cream-bg px-3 text-sm font-semibold text-soil-deep focus:outline-none focus:ring-2 focus:ring-leaf-green"
             />
           </div>
+
           <div>
-            <label className="text-xs font-semibold text-soil-brown">
-              मांग दर (₹/क्विंटल)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-soil-brown">
+                आपकी दर (₹ प्रति क्विंटल) / Asking Rate
+              </label>
+              <button
+                type="button"
+                onClick={() => setRatePerQuintal(benchmarkRate)}
+                className="text-xs font-bold text-leaf-deep hover:underline"
+              >
+                बेंचमार्क दर सेट करें (Set ₹{benchmarkRate})
+              </button>
+            </div>
             <input
               type="number"
               min={100}
               value={ratePerQuintal}
               onChange={(e) => setRatePerQuintal(Number(e.target.value))}
-              className="mt-1 min-h-[56px] w-full rounded-2xl border border-cream-border bg-cream-bg px-3 text-sm font-semibold text-soil-deep"
+              className="mt-1 min-h-[56px] w-full rounded-2xl border border-cream-border bg-cream-bg px-3 text-sm font-semibold text-soil-deep focus:outline-none focus:ring-2 focus:ring-leaf-green"
             />
           </div>
         </div>
@@ -248,65 +282,62 @@ export default function SellScreen() {
               </p>
             </div>
             <p>
-              सीतापुर मंडी का औसत भाव ₹{guardrail.mandiRate.toLocaleString('en-IN')}
-              /क्विंटल है। न्यूनतम सीमा से कम भाव रखने पर लाभ कम हो सकता है।
+              सावधानी: आप अपनी फसल मंडी औसत भाव (₹
+              {guardrail.mandiRate.toLocaleString('en-IN')}/Q) से काफी कम पर बेच रहे
+              हैं।
             </p>
             <p className="font-semibold">
-              (क्या आप सुनिश्चित हैं कि यह भाव सही है? • अंतिम निर्णय आपका है)
+              अनुशंसा: कम से कम ₹{guardrail.minAllowed.toLocaleString('en-IN')}/Q दर
+              रखें ताकि आपको उचित लाभ मिल सके।
             </p>
           </div>
         )}
 
         {guardrail.status === 'fair' && (
-          <div className="mt-3 space-y-1 rounded-2xl border border-leaf-green bg-leaf-soft px-3 py-2 text-xs text-leaf-deep">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} />
-              <p className="font-semibold">✅ उचित बाज़ार सीमा (Fair Market Range)</p>
-            </div>
-            <p>
-              मंडी औसत दर ₹{guardrail.mandiRate.toLocaleString('en-IN')}/Q के अनुसार
-              यह भाव स्वीकार्य सीमा (-15% से +40%) के भीतर है।
-            </p>
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-leaf-soft px-3 py-2 text-xs font-semibold text-leaf-deep">
+            <CheckCircle2 size={16} />
+            <span>
+              दर संतुलित है (मंडी औसत भाव ₹{guardrail.mandiRate}/Q के अनुकूल)।
+            </span>
           </div>
         )}
       </SurfaceCard>
 
       <SurfaceCard>
-        <h2 className="text-base font-bold">कटाई/उपलब्धता (Harvest / Availability)</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <h2 className="text-base font-bold text-soil-text">3. स्टॉक उपलब्धता (Availability)</h2>
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {availabilityPresets.map((preset) => (
             <button
               key={preset}
               type="button"
               onClick={() => setHarvestDate(preset)}
-              className={`min-h-[48px] rounded-full border px-4 text-sm font-semibold ${
+              className={`rounded-2xl border p-2.5 text-xs text-center transition-all ${
                 harvestDate === preset
-                  ? 'border-leaf-green bg-leaf-green text-white'
-                  : 'border-cream-border bg-cream-bg text-soil-deep'
+                  ? 'border-leaf-green bg-leaf-soft text-leaf-deep font-bold ring-2 ring-leaf-deep/20'
+                  : 'border-cream-border bg-cream-bg text-soil-text hover:border-leaf-green/40'
               }`}
             >
-              {preset}
+              {preset.split(' ')[0]}
             </button>
           ))}
         </div>
-        <div className="mt-3 rounded-2xl bg-cream-bg p-3 text-xs text-soil-brown">
-          <p>
-            <span className="font-semibold text-soil-deep">किसान:</span>{' '}
-            {MOCK_FARMER.name} • {MOCK_FARMER.location}
-          </p>
-          <p className="mt-1">
-            <span className="font-semibold text-soil-deep">फोन:</span>{' '}
-            {MOCK_FARMER.phone}
-          </p>
-        </div>
-      </SurfaceCard>
 
-      <button
-        onClick={handlePublish}
-        className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-leaf-green text-cream-card shadow-sm active:scale-[0.99]"
-      >
-        <Send size={18} /> बाज़ार में लिस्ट करें (Publish Lot)
-      </button>
+        <div className="mt-4 rounded-2xl bg-cream-tan/50 p-3 text-xs text-soil-brown leading-relaxed">
+          <p className="font-semibold text-soil-deep">किसान विवरण (Seller Info):</p>
+          <p className="mt-0.5">नाम: {MOCK_FARMER.name}</p>
+          <p>स्थान: {MOCK_FARMER.location}</p>
+          <p>सत्यापित किसान: हाँ (Kisan Credit Card Verified ✓)</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePublish}
+          className="mt-4 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-full bg-leaf-green text-sm font-bold text-cream-card shadow-md transition active:scale-95 hover:bg-leaf-deep"
+        >
+          <Send size={18} />
+          <span>मार्केटप्लेस पर प्रकाशित करें (Publish Listing)</span>
+        </button>
+      </SurfaceCard>
     </div>
   );
 }

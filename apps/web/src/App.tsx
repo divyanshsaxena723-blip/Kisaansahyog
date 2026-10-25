@@ -4,6 +4,7 @@ import { BottomNav } from "./components/layout/BottomNav";
 import { LanguageModal } from "./components/layout/LanguageModal";
 import { TopBar } from "./components/layout/TopBar";
 import { VoiceSheet } from "./components/layout/VoiceSheet";
+import { JudgeSimulatorDrawer } from "./components/demo/JudgeSimulatorDrawer";
 import AdvisoryScreen from "./screens/AdvisoryScreen";
 import BuyerScreens from "./screens/BuyerScreens";
 import LoginScreen from "./screens/LoginScreen";
@@ -11,6 +12,7 @@ import MarketScreen from "./screens/MarketScreen";
 import SellScreen from "./screens/SellScreen";
 import SoilScreen from "./screens/SoilScreen";
 import { useAppStore } from "./store/useAppStore";
+import { useVoiceStore } from "./store/useVoiceStore";
 
 export default function App() {
   const language = useAppStore((state) => state.language);
@@ -18,7 +20,7 @@ export default function App() {
   const farmerTab = useAppStore((state) => state.farmerTab);
   const buyerTab = useAppStore((state) => state.buyerTab);
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
-  const setVoiceOpen = useAppStore((state) => state.setVoiceOpen);
+  const openVoiceModal = useVoiceStore((state) => state.openVoiceModal);
 
   const dictionary = getDictionary(language);
 
@@ -47,6 +49,7 @@ export default function App() {
         <TopBar />
         <LoginScreen />
         <LanguageModal />
+        <JudgeSimulatorDrawer />
       </div>
     );
   }
@@ -66,7 +69,7 @@ export default function App() {
           <div className="mx-auto flex w-full max-w-md justify-end px-4">
             <button
               type="button"
-              onClick={() => setVoiceOpen(true)}
+              onClick={openVoiceModal}
               aria-label={dictionary.common.voiceAssistant}
               className="pointer-events-auto flex h-14 w-14 min-h-[56px] min-w-[56px] items-center justify-center rounded-full bg-harvest-gold text-soil-deep shadow-lg transition active:scale-95"
             >
@@ -75,6 +78,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Floating Judge Simulation Sandbox Drawer */}
+      <JudgeSimulatorDrawer />
 
       <VoiceSheet />
       <BottomNav />

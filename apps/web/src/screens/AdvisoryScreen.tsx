@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   CloudDrizzle,
+  CloudRain,
   Droplets,
   Flower2,
   Leaf,
@@ -15,6 +16,8 @@ import {
   TrendingUp,
   Coins,
   ShieldCheck,
+  Bug,
+  ShieldAlert,
 } from "lucide-react";
 import {
   getDictionary,
@@ -23,6 +26,8 @@ import {
   calculateCropEconomics,
 } from "@kisaansahyog/shared";
 import { useAppStore } from "../store/useAppStore";
+import { useSimulationStore } from "../store/useSimulationStore";
+import { useVoiceStore } from "../store/useVoiceStore";
 import { SurfaceCard } from "../components/stitch/SurfaceCard";
 import { StatusBadge } from "../components/stitch/StatusBadge";
 import {
@@ -66,8 +71,14 @@ const alternatives = [
 export default function AdvisoryScreen() {
   const language = useAppStore((state) => state.language);
   const is2GMode = useAppStore((state) => state.is2GMode);
-  const setVoiceOpen = useAppStore((state) => state.setVoiceOpen);
+  const openVoiceModal = useVoiceStore((state) => state.openVoiceModal);
   const dictionary = getDictionary(language);
+
+  // Simulation Sandbox State
+  const isIrrigationPostponed = useSimulationStore((state) => state.isIrrigationPostponed);
+  const pestAlertActive = useSimulationStore((state) => state.pestAlertActive);
+  const simulatedRainProb = useSimulationStore((state) => state.simulatedRainProb);
+  const simulatedSavings = useSimulationStore((state) => state.simulatedSavings);
 
   const [weather, setWeather] = useState<TelemetryWeatherData>(FALLBACK_WEATHER);
   const [advisory, setAdvisory] = useState<TelemetryAdvisoryData>(FALLBACK_ADVISORY);
@@ -114,8 +125,16 @@ export default function AdvisoryScreen() {
     return dictionary.greetings.evening;
   }, [dictionary]);
 
-  const weatherLabel =
-    language === "hi"
+  // Use simulation rain probability if postponed scenario is active
+  const effectiveRainProb = isIrrigationPostponed
+    ? simulatedRainProb
+    : weather.rainProbability;
+
+  const weatherLabel = isIrrigationPostponed
+    ? language === "hi"
+      ? "भारी बारिश का पूर्वानुमान (85%)"
+      : "Heavy Rain Forecast (85%)"
+    : language === "hi"
       ? weather.conditionHi || weather.condition
       : weather.condition;
 
@@ -130,20 +149,97 @@ export default function AdvisoryScreen() {
           </h1>
         </div>
         <button
-          onClick={() => setVoiceOpen(true)}
+          onClick={openVoiceModal}
           className="flex min-h-[48px] items-center gap-1.5 rounded-full bg-leaf-green px-4 text-sm font-semibold text-cream-card shadow-sm active:scale-95 transition-transform"
         >
           <Mic size={18} /> {dictionary.common.voiceAssistant}
         </button>
       </div>
 
+      {/* SIMULATION TRIGGER ALERT 1: Heavy Rain & Irrigation Postponed */}
+      {isIrrigationPostponed && (
+        <div className="rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 p-4 text-amber-950 shadow-md animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-200 text-amber-900 shrink-0">
+              <CloudRain size={24} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="rounded-full bg-amber-200 px-2.5 py-0.5 text-[10px] font-black uppercase text-amber-900">
+                  {language === "hi" ? "मौसम अलर्ट (Rain Forecast)" : "Weather Alert"}
+                </span>
+                <span className="text-xs font-black text-amber-900">85% वर्षा संभावना</span>
+              </div>
+              <p className="mt-1.5 text-sm font-bold text-amber-950 leading-snug">
+                {language === "hi"
+                  ? "🌧️ मौसम अलर्ट: अगले 48 घंटों में भारी वर्षा का अनुमान। प्रथम CRI सिंचाई 2 दिन के लिए टालें!"
+                  : "🌧️ Weather Alert: Heavy rain forecast within 48 hours. Postpone 1st CRI irrigation by 2 days!"}
+              </p>
+              <div className="mt-2.5 flex items-center justify-between rounded-xl bg-amber-100/80 p-2.5 text-xs text-amber-950 font-bold border border-amber-300/60">
+                <span>
+                  💰 {language === "hi" ? "संचित डीजल बचत:" : "Cumulative Diesel Savings:"}
+                </span>
+                <span className="text-sm font-black text-leaf-deep">
+                  ₹{simulatedSavings || 2400} (3 एकड़ पर नलकूप खर्च बचा)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SIMULATION TRIGGER ALERT 2: Pest Outbreak Remediation Card */}
+      {pestAlertActive && (
+        <div className="rounded-2xl bg-red-500/15 border-2 border-red-500/50 p-4 text-red-950 shadow-md animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-200 text-red-800 shrink-0">
+              <Bug size={24} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="rounded-full bg-red-200 px-2.5 py-0.5 text-[10px] font-black uppercase text-red-900">
+                  {language === "hi" ? "कीट प्रकोप आपात चेतावनी" : "Critical Pest Alert"}
+                </span>
+                <span className="text-xs font-black text-red-700">Immediate Action</span>
+              </div>
+              <p className="mt-1.5 text-sm font-bold text-red-950 leading-snug">
+                {language === "hi"
+                  ? "⚠️ फसल सुरक्षा अलर्ट: दीमक व तना छेदक का प्रकोप देखा गया!"
+                  : "⚠️ Crop Protection Alert: Termite and stem borer infestation detected!"}
+              </p>
+              <p className="mt-1.5 text-xs text-red-900 leading-relaxed font-medium">
+                {language === "hi"
+                  ? "उपचार: तत्काल क्लोरपायरीफॉस 20% EC (Chlorpyrifos 20 EC) @ 1 लीटर/एकड़ सिंचाई जल के साथ या 200 लीटर पानी में मिलाकर छिड़काव करें।"
+                  : "Treatment: Immediately apply Chlorpyrifos 20% EC @ 1 L/acre with irrigation water or spray mixed in 200 L water."}
+              </p>
+              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-red-900 bg-red-100 px-2.5 py-1.5 rounded-xl border border-red-200">
+                <ShieldAlert size={15} />
+                <span>सुरक्षा: छिड़काव के समय दस्ताने व सुरक्षात्मक मास्क अवश्य पहनें।</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Weather & Active Crop SurfaceCard */}
       <SurfaceCard className="relative overflow-hidden">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <StatusBadge tone={weather.source === "live" ? "leaf" : "gold"}>
-                {weather.source === "live" ? "Live Telemetry" : "Offline Data"}
+              <StatusBadge
+                tone={
+                  isIrrigationPostponed
+                    ? "gold"
+                    : weather.source === "live"
+                      ? "leaf"
+                      : "gold"
+                }
+              >
+                {isIrrigationPostponed
+                  ? "🌧️ Sim: Rain Expected"
+                  : weather.source === "live"
+                    ? "Live Telemetry"
+                    : "Offline Data"}
               </StatusBadge>
               {loading && <span className="text-[10px] text-soil-brown animate-pulse">Syncing...</span>}
             </div>
@@ -182,16 +278,30 @@ export default function AdvisoryScreen() {
             {
               icon: CloudDrizzle,
               label: "Rain Prob.",
-              value: `${weather.rainProbability}%`,
+              value: `${effectiveRainProb}%`,
+              highlight: isIrrigationPostponed,
             },
           ].map((item) => (
             <div
               key={item.label}
-              className="flex flex-col items-center rounded-2xl bg-cream-bg py-2 text-center"
+              className={`flex flex-col items-center rounded-2xl py-2 text-center transition-colors ${
+                (item as any).highlight
+                  ? "bg-amber-100 border border-amber-300"
+                  : "bg-cream-bg"
+              }`}
             >
-              <item.icon size={16} className="text-leaf-green" />
+              <item.icon
+                size={16}
+                className={(item as any).highlight ? "text-amber-800" : "text-leaf-green"}
+              />
               <p className="mt-1 text-[11px] text-soil-brown">{item.label}</p>
-              <p className="text-sm font-bold text-soil-text">{item.value}</p>
+              <p
+                className={`text-sm font-bold ${
+                  (item as any).highlight ? "text-amber-900" : "text-soil-text"
+                }`}
+              >
+                {item.value}
+              </p>
             </div>
           ))}
         </div>
@@ -199,7 +309,7 @@ export default function AdvisoryScreen() {
         {/* Dynamic Stage-Specific CRI Irrigation Advisory Card */}
         <div
           className={`mt-4 rounded-2xl p-3.5 transition-colors border ${
-            advisory.action === "postpone"
+            isIrrigationPostponed || advisory.action === "postpone"
               ? "bg-harvest-gold/15 border-harvest-gold/30 text-soil-deep"
               : advisory.action === "irrigate"
                 ? "bg-leaf-soft border-leaf-deep/20 text-leaf-deep"
@@ -207,7 +317,7 @@ export default function AdvisoryScreen() {
           }`}
         >
           <div className="flex items-start gap-2.5">
-            {advisory.action === "postpone" ? (
+            {isIrrigationPostponed || advisory.action === "postpone" ? (
               <AlertCircle size={20} className="mt-0.5 text-harvest-gold shrink-0" />
             ) : (
               <Leaf size={20} className="mt-0.5 text-leaf-deep shrink-0" />
@@ -215,20 +325,34 @@ export default function AdvisoryScreen() {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold">
-                  {language === "hi" ? advisory.headlineHi : advisory.headline}
+                  {isIrrigationPostponed
+                    ? language === "hi"
+                      ? "वर्षा की संभावना है, सिंचाई 2 दिन टालें"
+                      : "Postpone irrigation by 2 days (Rain expected)"
+                    : language === "hi"
+                      ? advisory.headlineHi
+                      : advisory.headline}
                 </p>
-                {advisory.dieselSavingsAmount > 0 && (
+                {(isIrrigationPostponed || advisory.dieselSavingsAmount > 0) && (
                   <StatusBadge tone="gold">
-                    {language === "hi" ? advisory.savingsNoteHi : advisory.savingsNote}
+                    {language === "hi"
+                      ? `डीजल बचत: ₹${isIrrigationPostponed ? simulatedSavings || 2400 : advisory.dieselSavingsAmount}`
+                      : `Save ₹${isIrrigationPostponed ? simulatedSavings || 2400 : advisory.dieselSavingsAmount}`}
                   </StatusBadge>
                 )}
               </div>
               <p className="mt-1 text-xs leading-relaxed text-soil-brown">
-                {language === "hi" ? advisory.advisoryTextHi : advisory.advisoryText}
+                {isIrrigationPostponed
+                  ? language === "hi"
+                    ? "सीतापुर में 85% वर्षा संभावना के कारण सिंचाई स्थगित की गई है। इससे 3 एकड़ पर नलकूप का ₹2,400 खर्च बचेगा और पौधों की जड़ें जलभराव से सुरक्षित रहेंगी।"
+                    : "Irrigation postponed due to 85% rain forecast in Sitapur. Prevents waterlogging and preserves ₹2,400 in diesel expenditure."
+                  : language === "hi"
+                    ? advisory.advisoryTextHi
+                    : advisory.advisoryText}
               </p>
               <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-soil-brown">
                 <span>अवस्था: {advisory.stageHi || advisory.stage}</span>
-                <span>अनुशंसा: {advisory.recommendedDate}</span>
+                <span>अनुशंसा: {isIrrigationPostponed ? "2 दिन बाद समीक्षा करें" : advisory.recommendedDate}</span>
               </div>
             </div>
           </div>
@@ -306,7 +430,13 @@ export default function AdvisoryScreen() {
             <span className="font-bold text-soil-text">
               {language === "hi" ? "वर्तमान कार्य:" : "Current Action:"}
             </span>{" "}
-            {language === "hi" ? stageInfo.criticalActionHi : stageInfo.criticalAction}
+            {isIrrigationPostponed
+              ? language === "hi"
+                ? "बारिश के कारण सिंचाई 2 दिन टाली गई है। यूरिया टॉप-ड्रेसिंग बारिश रुकने पर करें।"
+                : "Irrigation postponed due to rain forecast. Top-dress Urea once soil moisture settles."
+              : language === "hi"
+                ? stageInfo.criticalActionHi
+                : stageInfo.criticalAction}
           </p>
         </div>
       </SurfaceCard>
@@ -369,29 +499,49 @@ export default function AdvisoryScreen() {
       <SurfaceCard>
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold">Today's tasks (CRI Stage)</h2>
-          <StatusBadge tone="neutral">{tasks.length} active</StatusBadge>
+          <StatusBadge tone="neutral">{tasks.length} tasks</StatusBadge>
         </div>
         <div className="mt-3 space-y-2">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex min-h-[56px] items-center justify-between rounded-2xl border border-cream-border bg-cream-bg/60 px-3 py-2"
-            >
-              <div className="flex items-center gap-2">
-                <Sprout size={18} className="text-leaf-green" />
-                <div>
-                  <p className="text-sm font-semibold">{task.title}</p>
-                  <p className="text-xs text-soil-brown">{task.subtitle}</p>
+          {tasks.map((task) => {
+            const isPostponed = task.id === "irrigation" && isIrrigationPostponed;
+            return (
+              <div
+                key={task.id}
+                className={`flex min-h-[56px] items-center justify-between rounded-2xl border px-3 py-2 transition-colors ${
+                  isPostponed
+                    ? "border-amber-300 bg-amber-50/70"
+                    : "border-cream-border bg-cream-bg/60"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Sprout
+                    size={18}
+                    className={isPostponed ? "text-harvest-gold" : "text-leaf-green"}
+                  />
+                  <div>
+                    <p className="text-sm font-semibold">{task.title}</p>
+                    <p className="text-xs text-soil-brown">
+                      {isPostponed
+                        ? "वर्षा पूर्वानुमान के कारण 2 दिन के लिए स्थगित"
+                        : task.subtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  {isPostponed ? (
+                    <StatusBadge tone="gold">स्थगित (Postponed)</StatusBadge>
+                  ) : (
+                    <>
+                      <p className="text-xs font-semibold">{task.time}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-soil-brown">
+                        {task.priority}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-semibold">{task.time}</p>
-                <p className="text-[10px] uppercase tracking-wide text-soil-brown">
-                  {task.priority}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </SurfaceCard>
 
