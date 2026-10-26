@@ -3,6 +3,7 @@ import {
   type CropListing,
   type BargainOffer,
 } from '@kisaansahyog/shared';
+import { enqueueMutation } from '../utils/offlineQueue';
 
 export const API_BASE_URL =
   (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
@@ -328,7 +329,7 @@ export const createListing = async (
       [payload.district, payload.state].filter(Boolean).join(', '),
   };
 
-  return safeFetch(
+  const result = await safeFetch<{ listing: ApiListing | null; source?: string }>(
     `${API_BASE_URL}/api/listings`,
     {
       method: 'POST',
@@ -338,6 +339,13 @@ export const createListing = async (
     { listing: localListing, source: 'fallback' },
     2000,
   );
+
+  // If live submission fails or falls back, enqueue to offline mutation queue
+  if (!result.ok || result.source === 'fallback') {
+    enqueueMutation('CREATE_LISTING', payload);
+  }
+
+  return result;
 };
 
 export const createListingApi = createListing;
@@ -371,7 +379,7 @@ export const createOffer = async (
     createdAt: new Date().toISOString(),
   };
 
-  return safeFetch(
+  const result = await safeFetch<{ offer: ApiOffer | null; source?: string }>(
     `${API_BASE_URL}/api/offers`,
     {
       method: 'POST',
@@ -381,6 +389,13 @@ export const createOffer = async (
     { offer: localOffer, source: 'fallback' },
     2000,
   );
+
+  // If live submission fails or falls back, enqueue to offline mutation queue
+  if (!result.ok || result.source === 'fallback') {
+    enqueueMutation('SUBMIT_OFFER', payload);
+  }
+
+  return result;
 };
 
 export const createOfferApi = createOffer;

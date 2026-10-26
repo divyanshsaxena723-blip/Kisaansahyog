@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Mic } from "lucide-react";
 import { getDictionary, type BuyerTab, type FarmerTab } from "@kisaansahyog/shared";
 import { BottomNav } from "./components/layout/BottomNav";
@@ -13,6 +14,7 @@ import SellScreen from "./screens/SellScreen";
 import SoilScreen from "./screens/SoilScreen";
 import { useAppStore } from "./store/useAppStore";
 import { useVoiceStore } from "./store/useVoiceStore";
+import { initOfflineSyncWatcher } from "./utils/offlineQueue";
 
 export default function App() {
   const language = useAppStore((state) => state.language);
@@ -21,6 +23,15 @@ export default function App() {
   const buyerTab = useAppStore((state) => state.buyerTab);
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const openVoiceModal = useVoiceStore((state) => state.openVoiceModal);
+
+  useEffect(() => {
+    const unbind = initOfflineSyncWatcher((res) => {
+      if (res.syncedCount > 0) {
+        console.log(`[PWA Offline Sync] Successfully synced ${res.syncedCount} queued mutations`);
+      }
+    });
+    return unbind;
+  }, []);
 
   const dictionary = getDictionary(language);
 
