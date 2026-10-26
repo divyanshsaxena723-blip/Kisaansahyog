@@ -21,13 +21,13 @@ import {
 } from "lucide-react";
 import {
   getDictionary,
-  MOCK_FARMER,
   calculateCropStageInfo,
   calculateCropEconomics,
 } from "@kisaansahyog/shared";
 import { useAppStore } from "../store/useAppStore";
 import { useSimulationStore } from "../store/useSimulationStore";
 import { useVoiceStore } from "../store/useVoiceStore";
+import { useFarmerProfileStore } from "../store/useFarmerProfileStore";
 import { SurfaceCard } from "../components/stitch/SurfaceCard";
 import { StatusBadge } from "../components/stitch/StatusBadge";
 import {
@@ -84,22 +84,62 @@ export default function AdvisoryScreen() {
   const [advisory, setAdvisory] = useState<TelemetryAdvisoryData>(FALLBACK_ADVISORY);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Farmer Profile & Live GPS Telemetry
+  const farmerProfile = useFarmerProfileStore((state) => state.profile);
+  const getDaysSinceSowing = useFarmerProfileStore((state) => state.getDaysSinceSowing);
+  const toggleProfileDrawer = useFarmerProfileStore((state) => state.toggleProfileDrawer);
+
+  const daysSinceSowing = getDaysSinceSowing();
+  const cropBase = useMemo(() => {
+    const cropStr = (farmerProfile.activeCrop || "").toLowerCase();
+    if (cropStr.includes("mustard") || cropStr.includes("सरसों")) return "Mustard";
+    if (cropStr.includes("chana") || cropStr.includes("चना")) return "Chana";
+    if (cropStr.includes("basmati") || cropStr.includes("बासमती")) return "Basmati";
+    if (cropStr.includes("maize") || cropStr.includes("मक्का")) return "Maize";
+    return "Wheat";
+  }, [farmerProfile.activeCrop]);
+
   // Pure Agronomic Engine Calculations
   const stageInfo = useMemo(() => {
-    return calculateCropStageInfo("Wheat", 28);
-  }, []);
+    return calculateCropStageInfo(cropBase, daysSinceSowing);
+  }, [cropBase, daysSinceSowing]);
 
   const economics = useMemo(() => {
-    return calculateCropEconomics("Wheat", 3.0, 19.5, 2450);
-  }, []);
+    const yieldPerAcre =
+      cropBase === "Mustard"
+        ? 9.0
+        : cropBase === "Chana"
+        ? 8.5
+        : cropBase === "Basmati"
+        ? 16.0
+        : cropBase === "Maize"
+        ? 22.0
+        : 19.5;
+    const rate =
+      cropBase === "Mustard"
+        ? 5400
+        : cropBase === "Chana"
+        ? 5350
+        : cropBase === "Basmati"
+        ? 3600
+        : cropBase === "Maize"
+        ? 2100
+        : 2450;
+    return calculateCropEconomics(cropBase, farmerProfile.landAcres, yieldPerAcre, rate);
+  }, [cropBase, farmerProfile.landAcres]);
 
   useEffect(() => {
     let isMounted = true;
     async function loadTelemetry() {
       try {
+        setLoading(true);
         const [weatherRes, advisoryRes] = await Promise.all([
-          fetchTelemetryWeather(),
-          fetchTelemetryAdvisory(28),
+          fetchTelemetryWeather(
+            farmerProfile.lat,
+            farmerProfile.lon,
+            `${farmerProfile.district}, ${farmerProfile.state}`
+          ),
+          fetchTelemetryAdvisory(daysSinceSowing),
         ]);
         if (isMounted) {
           if (weatherRes.data) setWeather(weatherRes.data);
@@ -116,7 +156,13 @@ export default function AdvisoryScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [
+    farmerProfile.lat,
+    farmerProfile.lon,
+    farmerProfile.district,
+    farmerProfile.state,
+    daysSinceSowing,
+  ]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -243,9 +289,19 @@ export default function AdvisoryScreen() {
               </StatusBadge>
               {loading && <span className="text-[10px] text-soil-brown animate-pulse">Syncing...</span>}
             </div>
-            <h2 className="mt-2 text-lg font-bold">{MOCK_FARMER.activeCrop}</h2>
+            <div className="flex items-center gap-2 mt-2">
+              <h2 className="text-lg font-bold">{farmerProfile.activeCrop}</h2>
+              <button
+                type="button"
+                onClick={toggleProfileDrawer}
+                className="text-[10px] font-bold text-leaf-deep underline hover:text-leaf-green"
+                title={language === "hi" ? "फसल व खेत सेटिंग्स बदलें" : "Edit Crop & Farm Settings"}
+              >
+                ({language === "hi" ? "बदलें" : "Edit"})
+              </button>
+            </div>
             <p className="text-xs text-soil-brown">
-              {MOCK_FARMER.location} • {MOCK_FARMER.land}
+              📍 {farmerProfile.village ? `${farmerProfile.village}, ` : ""}{farmerProfile.district}, {farmerProfile.state} • {farmerProfile.landAcres} {language === "hi" ? "एकड़" : "Acres"}
             </p>
           </div>
           <div className="text-right">

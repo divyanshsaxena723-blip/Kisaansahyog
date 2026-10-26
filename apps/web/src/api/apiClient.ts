@@ -402,15 +402,102 @@ export const createOfferApi = createOffer;
 
 // --- Phase 5 Telemetry API Helpers ---
 
-export const fetchTelemetryWeather = async (): Promise<
-  SafeFetchResult<TelemetryWeatherData>
-> => {
-  return safeFetch<TelemetryWeatherData>(
-    `${API_BASE_URL}/api/telemetry/weather`,
+function mapWmoCode(code: number): { condition: string; conditionHi: string } {
+  if (code === 0) return { condition: 'Clear Sky', conditionHi: 'साफ आसमान' };
+  if (code === 1) return { condition: 'Mainly Clear', conditionHi: 'मुख्यतः साफ' };
+  if (code === 2) return { condition: 'Partly Cloudy', conditionHi: 'आंशिक रूप से बादल' };
+  if (code === 3) return { condition: 'Overcast', conditionHi: 'घने बादल' };
+  if (code === 45 || code === 48) return { condition: 'Foggy', conditionHi: 'कोहरा' };
+  if (code >= 51 && code <= 55) return { condition: 'Light Drizzle', conditionHi: 'हल्की बूंदाबांदी' };
+  if (code >= 61 && code <= 65) return { condition: 'Rain', conditionHi: 'वर्षा' };
+  if (code >= 80 && code <= 82) return { condition: 'Rain Showers', conditionHi: 'वर्षा की फुहारें' };
+  if (code >= 95) return { condition: 'Thunderstorm', conditionHi: 'आंधी-तूफान' };
+  return { condition: 'Cloudy', conditionHi: 'बादल छाए रहेंगे' };
+}
+
+export const fetchTelemetryWeather = async (
+  lat?: number,
+  lon?: number,
+  locationName?: string
+): Promise<SafeFetchResult<TelemetryWeatherData>> => {
+  const queryParams = new URLSearchParams();
+  if (lat !== undefined) queryParams.set('lat', String(lat));
+  if (lon !== undefined) queryParams.set('lon', String(lon));
+  if (locationName) queryParams.set('location', locationName);
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+  // 1. Try local API server first
+  const result = await safeFetch<TelemetryWeatherData>(
+    `${API_BASE_URL}/api/telemetry/weather${queryString}`,
     { method: 'GET' },
-    FALLBACK_WEATHER,
+    {
+      ...FALLBACK_WEATHER,
+      location: locationName || FALLBACK_WEATHER.location,
+    },
     1500,
   );
+
+  if (result.ok && result.data && result.source === 'live') {
+    return result;
+  }
+
+  // 2. Direct browser Open-Meteo fallback if custom lat/lon provided
+  if (lat !== undefined && lon !== undefined) {
+    try {
+      const openMeteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FKolkata`;
+      const directRes = await fetch(openMeteoUrl);
+      if (directRes.ok) {
+        const raw = await directRes.json();
+        const current = raw?.current || {};
+        const daily = raw?.daily || {};
+        const temp = Math.round(Number(current.temperature_2m ?? 24));
+        const wmoCode = Number(current.weather_code ?? 0);
+        const { condition, conditionHi } = mapWmoCode(wmoCode);
+
+        const liveData: TelemetryWeatherData = {
+          temp,
+          tempMax:
+            Array.isArray(daily.temperature_2m_max) && daily.temperature_2m_max.length > 0
+              ? Math.round(daily.temperature_2m_max[0])
+              : temp + 4,
+          tempMin:
+            Array.isArray(daily.temperature_2m_min) && daily.temperature_2m_min.length > 0
+              ? Math.round(daily.temperature_2m_min[0])
+              : temp - 5,
+          humidity: Math.round(Number(current.relative_humidity_2m ?? 55)),
+          rainProbability:
+            Array.isArray(daily.precipitation_probability_max) &&
+            daily.precipitation_probability_max.length > 0
+              ? Math.round(daily.precipitation_probability_max[0])
+              : 10,
+          condition,
+          conditionHi,
+          windSpeed: Math.round(Number(current.wind_speed_10m ?? 12)),
+          feelsLike: Math.round(Number(current.apparent_temperature ?? temp)),
+          location: locationName || `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
+          source: 'live',
+          timestamp: new Date().toISOString(),
+        };
+
+        return {
+          ok: true,
+          data: liveData,
+          source: 'live',
+          fetchedAt: Date.now(),
+        };
+      }
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      location: locationName || result.data.location,
+    },
+  };
 };
 
 export const fetchTelemetryMandi = async (): Promise<

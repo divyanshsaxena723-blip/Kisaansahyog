@@ -11,11 +11,11 @@ import {
 } from "lucide-react";
 import {
   getDictionary,
-  MOCK_FARMER,
   calculateFertilizerPrescription,
   type SoilTestInput,
 } from "@kisaansahyog/shared";
 import { useAppStore } from "../store/useAppStore";
+import { useFarmerProfileStore } from "../store/useFarmerProfileStore";
 import { SurfaceCard } from "../components/stitch/SurfaceCard";
 import { StatusBadge } from "../components/stitch/StatusBadge";
 import {
@@ -28,10 +28,20 @@ export default function SoilScreen() {
   const language = useAppStore((state) => state.language);
   const dictionary = getDictionary(language);
 
+  const farmerProfile = useFarmerProfileStore((state) => state.profile);
+  const toggleProfileDrawer = useFarmerProfileStore((state) => state.toggleProfileDrawer);
+
   const [soil, setSoil] = useState<TelemetrySoilData>(FALLBACK_SOIL);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedAcres, setSelectedAcres] = useState<number>(3.0);
+  const [selectedAcres, setSelectedAcres] = useState<number>(farmerProfile.landAcres || 3.0);
   const [activeScheduleStage, setActiveScheduleStage] = useState<number>(1); // Default to CRI stage
+
+  // Synchronize when farmerProfile changes
+  useEffect(() => {
+    if (farmerProfile.landAcres) {
+      setSelectedAcres(farmerProfile.landAcres);
+    }
+  }, [farmerProfile.landAcres]);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,33 +70,40 @@ export default function SoilScreen() {
       nitrogenStatus: "low",
       phosphorusStatus: "low",
       potassiumStatus: "medium",
-      ph: soil.pH || 7.2,
+      ph: farmerProfile.soilPh || soil.pH || 7.2,
       organicCarbonPercent: soil.organicCarbonPercent || 0.48,
     };
-    return calculateFertilizerPrescription(input, "Wheat HD-2967", selectedAcres);
-  }, [soil, selectedAcres]);
+    return calculateFertilizerPrescription(
+      input,
+      farmerProfile.activeCrop || "Wheat HD-2967",
+      selectedAcres
+    );
+  }, [soil, selectedAcres, farmerProfile.soilPh, farmerProfile.activeCrop]);
+
+  const currentMoisture = farmerProfile.soilMoisturePct || soil.moisturePercent;
+  const currentPh = farmerProfile.soilPh || soil.pH;
 
   const dials = [
     {
       label: "Soil Moisture",
       labelHi: "मिट्टी की नमी",
-      value: soil.moisturePercent,
+      value: currentMoisture,
       unit: "%",
       icon: Droplet,
       tone: "leaf" as const,
-      status: "34% (Optimal)",
-      statusHi: "34% (अनुकूल)",
+      status: `${currentMoisture}% (${currentMoisture < 25 ? "Low/Dry" : currentMoisture > 45 ? "Wet" : "Optimal"})`,
+      statusHi: `${currentMoisture}% (${currentMoisture < 25 ? "कम/सूखी" : currentMoisture > 45 ? "अधिक नमी" : "अनुकूल"})`,
       maxScale: 60,
     },
     {
       label: "Soil pH",
       labelHi: "पीएच मान",
-      value: soil.pH,
+      value: currentPh,
       unit: "",
       icon: FlaskConical,
       tone: "leaf" as const,
-      status: "7.2 (Neutral / Ideal)",
-      statusHi: "7.2 (उदासीन / आदर्श)",
+      status: `${currentPh.toFixed(1)} (${currentPh < 6.5 ? "Acidic" : currentPh > 7.5 ? "Alkaline" : "Neutral / Ideal"})`,
+      statusHi: `${currentPh.toFixed(1)} (${currentPh < 6.5 ? "अम्लीय" : currentPh > 7.5 ? "क्षारीय" : "उदासीन / आदर्श"})`,
       maxScale: 14,
     },
     {
@@ -118,15 +135,25 @@ export default function SoilScreen() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-extrabold text-soil-text">
-            {dictionary.screens.soil}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-extrabold text-soil-text">
+              {dictionary.screens.soil}
+            </h1>
+            <button
+              type="button"
+              onClick={toggleProfileDrawer}
+              className="text-[10px] font-bold text-leaf-deep underline hover:text-leaf-green"
+              title={language === "hi" ? "मृदा व खेत सेटिंग्स संपादित करें" : "Edit Soil & Farm Settings"}
+            >
+              ({language === "hi" ? "संपादित करें" : "Edit"})
+            </button>
+          </div>
           <p className="text-xs text-soil-brown">
-            District IoT Benchmarks • {MOCK_FARMER.location}
+            📍 {farmerProfile.district}, {farmerProfile.state} • {farmerProfile.soilType}
           </p>
         </div>
         <StatusBadge tone="leaf">
-          {soil.source === "district_benchmark" ? "Sitapur Benchmark" : "Live IoT"}
+          {`${farmerProfile.district} Benchmark`}
         </StatusBadge>
       </div>
 

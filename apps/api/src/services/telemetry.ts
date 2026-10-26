@@ -140,9 +140,12 @@ function mapWmoWeatherCode(code: number): { condition: string; conditionHi: stri
   return { condition: 'Cloudy', conditionHi: 'बादल छाए रहेंगे' };
 }
 
-export async function getSitapurWeather(): Promise<WeatherData> {
-  const url =
-    'https://api.open-meteo.com/v1/forecast?latitude=27.56&longitude=80.68&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FKolkata';
+export async function getSitapurWeather(
+  lat: number = 27.56,
+  lon: number = 80.68,
+  customLocation?: string
+): Promise<WeatherData> {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FKolkata`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 1500);
@@ -195,7 +198,7 @@ export async function getSitapurWeather(): Promise<WeatherData> {
       conditionHi,
       windSpeed,
       feelsLike,
-      location: 'Sitapur, Uttar Pradesh',
+      location: customLocation || 'Sitapur, Uttar Pradesh',
       source: 'live',
       timestamp: new Date().toISOString(),
     };

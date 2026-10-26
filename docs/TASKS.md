@@ -21,7 +21,7 @@ This document tracks all 16 phases of the KisaanSahyog Smart India Hackathon pro
 | 7 | Soil Health Card & Recommendations | [ ] | SHC upload/entry, NPK/pH analysis, organic carbon, actionable splits. |
 | 8 | Weather, Alerts & Risk Scoring | [ ] | Forecast, frost/heat/wind alerts, pest risk, 2G-optimized payloads. |
 | 9 | Mandi Prices & Market Insights | [ ] | Price feeds, trends, nearby mandis, fallback mock data, rate comparison. |
-| 10 | Sell Harvest & Buyer Directory | [ ] | Listing creation, buyer matching, call/whatsapp intents, KYC-lite checks. |
+| 10 | Monorepo Production Polish & Deployment Configs | [✓] | Root scripts, Docker/Docker-compose, Nginx PWA SPA configs, Vercel/Render manifests, CI pipeline, and docs/deployment.md |
 | 11 | Requirements Board & Saved Crops | [ ] | Buyer requirements, matching, saved crops, notifications. |
 | 12 | AI Chat & FAQ | [ ] | Context-aware chatbot, offline FAQ, guardrails, disclaimer enforcement. |
 | 13 | KVK Integration & Knowledge Base | [ ] | KVK contact mapping, sanctioned advisories, curated content sync. |

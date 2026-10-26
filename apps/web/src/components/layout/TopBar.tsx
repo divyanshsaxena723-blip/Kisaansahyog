@@ -1,6 +1,7 @@
-import { Globe, LogOut, Sprout, UserRound, Wifi, WifiOff } from "lucide-react";
+import { Globe, LogOut, Sliders, Sprout, UserRound, Wifi, WifiOff } from "lucide-react";
 import { getDictionary } from "@kisaansahyog/shared";
 import { useAppStore } from "../../store/useAppStore";
+import { useFarmerProfileStore } from "../../store/useFarmerProfileStore";
 
 function getGreetingKey(): "morning" | "afternoon" | "evening" {
   const hour = new Date().getHours();
@@ -25,7 +26,6 @@ const languageLabels: Record<string, string> = {
 
 export function TopBar() {
   const language = useAppStore((state) => state.language);
-  const role = useAppStore((state) => state.role);
   const is2GMode = useAppStore((state) => state.is2GMode);
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const userProfile = useAppStore((state) => state.userProfile);
@@ -33,7 +33,11 @@ export function TopBar() {
   const toggle2GMode = useAppStore((state) => state.toggle2GMode);
   const logout = useAppStore((state) => state.logout);
 
+  const farmerProfile = useFarmerProfileStore((state) => state.profile);
+  const toggleProfileDrawer = useFarmerProfileStore((state) => state.toggleProfileDrawer);
+
   const dictionary = getDictionary(language);
+  const isHi = language === "hi";
   const greeting = dictionary.greetings[getGreetingKey()];
 
   return (
@@ -54,6 +58,18 @@ export function TopBar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {/* Farm Profile & Settings Trigger */}
+          <button
+            type="button"
+            onClick={toggleProfileDrawer}
+            title={isHi ? "किसान प्रोफ़ाइल व खेत सेटिंग्स" : "Farmer Profile & Farm Settings"}
+            aria-label="Profile and Farm Settings"
+            className="inline-flex min-h-9 items-center gap-1 rounded-full border border-leaf-green/40 bg-leaf-soft px-2.5 text-[11px] font-bold text-leaf-deep transition hover:bg-leaf-green hover:text-cream-card active:scale-95 shadow-sm"
+          >
+            <Sliders size={13} aria-hidden="true" />
+            <span className="max-w-[70px] truncate">{farmerProfile.district || "खेत"}</span>
+          </button>
+
           <button
             type="button"
             onClick={toggle2GMode}
@@ -88,13 +104,26 @@ export function TopBar() {
       </div>
 
       {isAuthenticated && (
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-soil-text">{greeting}</p>
-            <p className="truncate text-[11px] text-soil-brown">
-              {userProfile?.name} • {dictionary.roles[role]}
-            </p>
-          </div>
+        <div className="mt-3 flex items-center justify-between gap-2.5">
+          <button
+            type="button"
+            onClick={toggleProfileDrawer}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-cream-border bg-cream-card px-3 py-2 text-left transition hover:bg-cream-tan/50 active:scale-[0.99] shadow-sm"
+            title={isHi ? "किसान प्रोफ़ाइल व खेत सेटिंग्स संपादित करें" : "Edit Profile & Farm Settings"}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-leaf-soft text-leaf-deep">
+              <UserRound size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-soil-text">
+                {greeting}, {farmerProfile.name || userProfile?.name}
+              </p>
+              <p className="truncate text-[10px] text-soil-brown">
+                📍 {farmerProfile.district}, {farmerProfile.state} • {farmerProfile.landAcres} {isHi ? "एकड़" : "Acres"} ({farmerProfile.activeCrop.split(" ")[0]})
+              </p>
+            </div>
+            <Sliders size={13} className="shrink-0 text-soil-brown" />
+          </button>
 
           <button
             type="button"
@@ -109,9 +138,18 @@ export function TopBar() {
       )}
 
       {!isAuthenticated && (
-        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-cream-tan/50 px-3 py-2">
-          <UserRound size={14} className="text-soil-brown" />
-          <p className="text-xs text-soil-brown">{dictionary.auth.subtitle}</p>
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl bg-cream-tan/50 px-3 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <UserRound size={14} className="text-soil-brown shrink-0" />
+            <p className="text-xs text-soil-brown truncate">{dictionary.auth.subtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleProfileDrawer}
+            className="shrink-0 text-[11px] font-bold text-leaf-deep hover:underline"
+          >
+            {isHi ? "खेत सेटिंग्स ⚙️" : "Farm Settings ⚙️"}
+          </button>
         </div>
       )}
     </header>

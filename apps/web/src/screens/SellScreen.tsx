@@ -8,6 +8,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { useListingStore } from '../store/useListingStore';
 import { useSimulationStore } from '../store/useSimulationStore';
+import { useFarmerProfileStore } from '../store/useFarmerProfileStore';
 import { SurfaceCard } from '../components/stitch/SurfaceCard';
 import { StatusBadge } from '../components/stitch/StatusBadge';
 
@@ -33,6 +34,7 @@ export default function SellScreen() {
   const isMandiCrashed = useSimulationStore((state) => state.isMandiCrashed);
 
   const addListing = useListingStore((state) => state.addListing);
+  const farmerProfile = useFarmerProfileStore((state) => state.profile);
 
   const [selectedCrop, setSelectedCrop] = useState(cropPresets[0]);
   const [quantityQuintals, setQuantityQuintals] = useState<number>(30);
@@ -100,10 +102,10 @@ export default function SellScreen() {
       variety: selectedCrop.variety,
       quantityQuintals: Number(quantityQuintals),
       ratePerQuintal: Number(ratePerQuintal),
-      farmerName: MOCK_FARMER.name,
-      farmerPhone: MOCK_FARMER.phone,
-      district: 'सीतापुर',
-      state: 'उत्तर प्रदेश',
+      farmerName: farmerProfile.name || MOCK_FARMER.name,
+      farmerPhone: farmerProfile.phone || MOCK_FARMER.phone,
+      district: farmerProfile.district || 'सीतापुर',
+      state: farmerProfile.state || 'उत्तर प्रदेश',
       harvestDate,
       verified: true,
       organic: false,

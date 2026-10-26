@@ -11,9 +11,12 @@ import {
 const router = Router();
 
 // GET /api/telemetry/weather
-router.get('/weather', async (_req: Request, res: Response) => {
+router.get('/weather', async (req: Request, res: Response) => {
   try {
-    const weather = await getSitapurWeather();
+    const lat = req.query.lat ? Number(req.query.lat) : 27.56;
+    const lon = req.query.lon ? Number(req.query.lon) : 80.68;
+    const location = (req.query.location as string) || (req.query.loc as string) || undefined;
+    const weather = await getSitapurWeather(lat, lon, location);
     return res.status(200).json({
       status: 'ok',
       service: 'telemetry_weather',

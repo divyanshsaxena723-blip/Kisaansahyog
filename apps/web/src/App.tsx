@@ -6,6 +6,7 @@ import { LanguageModal } from "./components/layout/LanguageModal";
 import { TopBar } from "./components/layout/TopBar";
 import { VoiceSheet } from "./components/layout/VoiceSheet";
 import { JudgeSimulatorDrawer } from "./components/demo/JudgeSimulatorDrawer";
+import { ProfileSettingsDrawer } from "./components/profile/ProfileSettingsDrawer";
 import AdvisoryScreen from "./screens/AdvisoryScreen";
 import BuyerScreens from "./screens/BuyerScreens";
 import LoginScreen from "./screens/LoginScreen";
@@ -61,6 +62,7 @@ export default function App() {
         <LoginScreen />
         <LanguageModal />
         <JudgeSimulatorDrawer />
+        <ProfileSettingsDrawer />
       </div>
     );
   }
@@ -92,6 +94,9 @@ export default function App() {
 
       {/* Floating Judge Simulation Sandbox Drawer */}
       <JudgeSimulatorDrawer />
+
+      {/* Interactive Farmer Profile & Farm Settings Drawer */}
+      <ProfileSettingsDrawer />
 
       <VoiceSheet />
       <BottomNav />

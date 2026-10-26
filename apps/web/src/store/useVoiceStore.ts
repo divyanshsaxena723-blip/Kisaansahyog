@@ -172,7 +172,9 @@ export const useVoiceStore = create<VoiceState>()((set, get) => ({
     if (activeRecognition) {
       try {
         activeRecognition.stop();
-      } catch {}
+      } catch {
+        // Recognition might already have stopped
+      }
       activeRecognition = null;
     }
     set({ isListening: false });
